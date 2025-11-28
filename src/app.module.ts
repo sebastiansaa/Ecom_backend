@@ -11,6 +11,12 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { OrdersModule } from './orders/orders.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { CartModule } from './cart/cart.module';
+import { PaymentsModule } from './payments/payments.module';
+import { ReturnsModule } from './returns/returns.module';
+import { SearchModule } from './search/search.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { CategoriesModule } from './categories/categories.module';
 
 
 @Module({
@@ -22,6 +28,12 @@ import { PrismaModule } from './prisma/prisma.module';
     AuthModule,
     OrdersModule,
     PrismaModule,
+    CartModule,
+    PaymentsModule,
+    ReturnsModule,
+    SearchModule,
+    NotificationsModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

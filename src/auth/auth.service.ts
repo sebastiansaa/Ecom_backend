@@ -30,8 +30,12 @@ export class AuthService {
   }
 
   private async signRefreshToken(payload: Record<string, any>, rid: string) {
-    // include rid in refresh token payload
-    return this.jwtService.signAsync({ ...payload, rid }, { expiresIn: this.config.get('REFRESH_TOKEN_EXPIRES_IN') || '7d' });
+    // include rid in refresh token payload and sign with refresh-specific secret when available
+    const refreshSecret = this.config.get<string>('jwtRefreshSecret') || this.config.get<string>('jwtSecret');
+    return this.jwtService.signAsync(
+      { ...payload, rid },
+      { expiresIn: this.config.get('REFRESH_TOKEN_EXPIRES_IN') || '7d', secret: refreshSecret },
+    );
   }
 
   private async createRefreshTokenEntry(userId: string, rid: string, refreshToken: string, device?: string) {
@@ -67,9 +71,14 @@ export class AuthService {
     // rotate: revoke old token and create new one
     await this.prisma.refreshToken.update({ where: { id: rid }, data: { revoked: true } });
     const newRid = require('uuid').v4();
-    const newRefresh = await this.signRefreshToken({ sub: userId, email: (await this.prisma.user.findUnique({ where: { id: userId } })).email }, newRid);
+    const userRec = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!userRec) {
+      await this.revokeAllTokens(userId);
+      throw new UnauthorizedException('User not found');
+    }
+    const newRefresh = await this.signRefreshToken({ sub: userId, email: userRec.email }, newRid);
     await this.createRefreshTokenEntry(userId, newRid, newRefresh);
-    const access = (await this.getTokens(userId, (await this.prisma.user.findUnique({ where: { id: userId } })).email)).access_token;
+    const access = (await this.getTokens(userId, userRec.email)).access_token;
     return { access_token: access, refresh_token: newRefresh };
   }
 

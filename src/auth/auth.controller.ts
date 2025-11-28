@@ -1,6 +1,6 @@
 import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
@@ -49,8 +49,8 @@ export class AuthController {
   @Post('refresh')
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     // JwtRefreshStrategy validates token and puts payload in req.user (payload includes rid)
-    const payload = req.user as any;
-    const oldRefresh = req.cookies?.['refresh_token'];
+    const payload = (req as any).user as any;
+    const oldRefresh = (req as any).cookies?.['refresh_token'];
     if (!oldRefresh) throw new Error('No refresh token');
     const rid = payload.rid as string;
     const userId = payload.sub as string;
@@ -69,8 +69,9 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   @Post('logout')
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const user = req.user as any;
-    await this.authService.removeRefreshToken(user.id);
+    const user = (req as any).user as any;
+    // revoke all refresh tokens for this user
+    await this.authService.revokeAllTokens(user.id);
     res.clearCookie('refresh_token', { path: '/' });
     return { ok: true };
   }

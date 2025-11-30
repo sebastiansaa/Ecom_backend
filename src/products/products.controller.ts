@@ -1,4 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UsePipes, ValidationPipe, UseGuards, UseInterceptors, UploadedFile, HttpCode, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UsePipes,
+  ValidationPipe,
+  UseGuards,
+  UseInterceptors,
+  HttpCode,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -10,13 +25,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 // Aplicar validación global a los DTO entrantes. "whitelist: true" Elim prop no def en el DTO.
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) { }
+  constructor(private readonly productsService: ProductsService) {}
 
   // Accept multipart (optional file) and JSON body together
   @Post()
-  @UseInterceptors(FileInterceptor('image'))//Interceptor que procesa la subida de archivos 
+  @UseInterceptors(FileInterceptor('image')) //Interceptor que procesa la subida de archivos
   @UseGuards(AuthGuard('jwt')) //protejer ruta
-  create(@UploadedFile() image: any, @Body() createProductDto: CreateProductDto) {
+  create(@Body() createProductDto: CreateProductDto) {
     return this.productsService.create(createProductDto);
   }
 
@@ -32,13 +47,16 @@ export class ProductsController {
 
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'))
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateProductDto: UpdateProductDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateProductDto: UpdateProductDto,
+  ) {
     return this.productsService.update(id, updateProductDto);
   }
 
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'))
-  @HttpCode(204)//- Fuerza el código de respuesta HTTP a 204 No Content en el DELETE.
+  @HttpCode(204) //- Fuerza el código de respuesta HTTP a 204 No Content en el DELETE.
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.productsService.remove(id);
   }

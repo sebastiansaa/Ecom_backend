@@ -1,45 +1,60 @@
-import { Injectable, ConflictException, NotFoundException, Logger, } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Logger,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateProductDto, UpdateProductDto, ResponseProductDto } from './dto';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { ProductEntity } from './entities/product.entity';
-import { ProductWithCategory, FindAllParams } from './interfaces';
+import { ProductsRepository } from './products.repository';
+import { ProductMapper } from './mappers/product.mapper';
+import { FindAllParams } from './interfaces';
 import type { Prisma } from '@prisma/client';
-import { normalizePriceForPersistence } from 'src/products/helpers/price.helper';
-import { validateCategoryExists, normalizeImages } from './helpers';
-
+import {
+  validateTitle,
+  validateSlug,
+  validatePriceValue,
+  validateImagesFormat,
+} from './helpers';
+import { handlePrismaError } from 'src/shared/helpers';
 
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly repository: ProductsRepository) {}
 
-  async create(createProductDto: CreateProductDto): Promise<ResponseProductDto> {
-    // Validar categoría con helper
-    await validateCategoryExists(this.prisma, createProductDto.categoryId);
+  async create(
+    createProductDto: CreateProductDto,
+  ): Promise<ResponseProductDto> {
+    // Validar categoría
+    const categoryExists = await this.repository.checkCategory(
+      createProductDto.categoryId,
+    );
+    if (!categoryExists) {
+      throw new BadRequestException('La categoría especificada no existe');
+    }
 
-    const data: Prisma.ProductCreateInput = {
-      title: createProductDto.title,
-      slug: createProductDto.slug,
-      description: createProductDto.description,
-      images: normalizeImages(createProductDto.images),
-      price: normalizePriceForPersistence(createProductDto.price),
-      category: { connect: { id: createProductDto.categoryId } },
-    };
+    // Reglas de integridad de negocio
+    validateTitle(createProductDto.title);
+    validateSlug(createProductDto.slug);
+    validatePriceValue(createProductDto.price);
+    validateImagesFormat(createProductDto.images);
+
+    const data = ProductMapper.toPersistence(createProductDto);
 
     try {
-      const product = (await this.prisma.product.create({
-        data,
-        include: { category: true },
-      })) as ProductWithCategory;
-
-      return new ProductEntity(product).toDTO();
-    } catch (err: any) {
-      this.logger.error(err?.message, err?.stack, { slug: createProductDto.slug });
-      if (err?.code === 'P2002') {
-        throw new ConflictException('Producto con ese slug ya existe');
+      const product = await this.repository.create(data);
+      return ProductMapper.toDTO(ProductMapper.toEntity(product));
+    } catch (err) {
+      if (err instanceof Error) {
+        this.logger.error(err.message, err.stack, {
+          slug: createProductDto.slug,
+        });
       }
-      throw err;
+      handlePrismaError(err, {
+        resource: 'Producto',
+        messages: { P2002: 'Producto con ese slug ya existe' },
+      });
     }
   }
 
@@ -50,92 +65,88 @@ export class ProductsService {
 
     const where: Prisma.ProductWhereInput | undefined = q
       ? {
-        OR: [
-          { title: { contains: q, mode: 'insensitive' } },
-          { description: { contains: q, mode: 'insensitive' } },
-        ],
-      }
+          OR: [
+            { title: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+          ],
+        }
       : undefined;
 
-    const products = (await this.prisma.product.findMany({
+    const products = await this.repository.findAll({
       where,
-      include: { category: true },
       take: sanitizedTake,
       skip,
-      orderBy: { createdAt: 'desc' },
-    })) as ProductWithCategory[];
+    });
 
-    return products.map((p) => new ProductEntity(p).toDTO());
+    return products.map((p) => ProductMapper.toDTO(ProductMapper.toEntity(p)));
   }
 
   async findOne(id: number): Promise<ResponseProductDto> {
-    const product = await this.prisma.product.findUnique({
-      where: { id },
-      include: { category: true },
-    });
+    const product = await this.repository.findOne(id);
 
     if (!product) {
       throw new NotFoundException(`Producto ${id} no encontrado`);
     }
 
-    return new ProductEntity(product as ProductWithCategory).toDTO();
+    return ProductMapper.toDTO(ProductMapper.toEntity(product));
   }
 
   async update(
     id: number,
     updateProductDto: Partial<UpdateProductDto>,
   ): Promise<ResponseProductDto> {
-    const existing = await this.prisma.product.findUnique({
-      where: { id },
-      include: { category: true },
-    });
+    const existing = await this.repository.findOne(id);
     if (!existing) {
       throw new NotFoundException(`Producto con id ${id} no existe`);
     }
 
     if (updateProductDto.categoryId) {
-      await validateCategoryExists(this.prisma, updateProductDto.categoryId);
+      const categoryExists = await this.repository.checkCategory(
+        updateProductDto.categoryId,
+      );
+      if (!categoryExists) {
+        throw new BadRequestException('La categoría especificada no existe');
+      }
     }
 
-    const data: Partial<Prisma.ProductUpdateInput> = {};
-
-    if (updateProductDto.title !== undefined) data.title = updateProductDto.title;
-    if (updateProductDto.slug !== undefined) data.slug = updateProductDto.slug;
-    if (updateProductDto.description !== undefined)
-      data.description = updateProductDto.description;
-    if (updateProductDto.images !== undefined)
-      data.images = normalizeImages(updateProductDto.images) ?? existing.images;
+    // Validaciones solo para campos presentes
+    if (updateProductDto.title !== undefined)
+      validateTitle(updateProductDto.title);
+    if (updateProductDto.slug !== undefined)
+      validateSlug(updateProductDto.slug);
     if (updateProductDto.price !== undefined)
-      data.price = normalizePriceForPersistence(updateProductDto.price);
-    if (updateProductDto.categoryId !== undefined)
-      data.category = { connect: { id: updateProductDto.categoryId } };
+      validatePriceValue(updateProductDto.price);
+    if (updateProductDto.images !== undefined)
+      validateImagesFormat(updateProductDto.images ?? undefined);
+
+    // Construir payload de update usando Mapper
+    const data = ProductMapper.toPersistenceUpdate(updateProductDto);
 
     try {
-      const product = (await this.prisma.product.update({
-        where: { id },
-        data,
-        include: { category: true },
-      })) as ProductWithCategory;
-
-      return new ProductEntity(product).toDTO();
-    } catch (err: any) {
-      this.logger.error(err?.message, err?.stack, { id });
-      if (err?.code === 'P2002') {
-        throw new ConflictException('Producto con ese slug ya existe');
+      const product = await this.repository.update(id, data);
+      return ProductMapper.toDTO(ProductMapper.toEntity(product));
+    } catch (err) {
+      if (err instanceof Error) {
+        this.logger.error(err.message, err.stack, { id });
       }
-      throw err;
+      handlePrismaError(err, {
+        resource: 'Producto',
+        messages: { P2002: 'Producto con ese slug ya existe' },
+      });
     }
   }
 
   async remove(id: number): Promise<void> {
     try {
-      await this.prisma.product.delete({ where: { id } });
-    } catch (err: any) {
-      this.logger.error(err?.message, err?.stack, { id });
-      if (err?.code === 'P2025') {
-        throw new NotFoundException(`Producto ${id} no encontrado`);
+      await this.repository.remove(id);
+    } catch (err) {
+      if (err instanceof Error) {
+        this.logger.error(err.message, err.stack, { id });
       }
-      throw err;
+      handlePrismaError(err, {
+        resource: 'Producto',
+        messages: { P2025: `Producto ${id} no encontrado` },
+      });
     }
   }
 }

@@ -1,23 +1,21 @@
-import { Expose } from "class-transformer";
-
+import { Expose } from 'class-transformer';
 
 export class CategoryResponseDto {
+  @Expose()
+  id: number;
 
-    @Expose()
-    id: number;
+  @Expose()
+  name: string;
 
-    @Expose()
-    name: string;
+  @Expose()
+  slug: string;
 
-    @Expose()
-    slug: string;
+  @Expose()
+  image: string;
 
-    @Expose()
-    image: string;
+  @Expose()
+  createdAt: string;
 
-    @Expose()
-    createdAt: string;
-
-    @Expose()
-    updatedAt: string;
+  @Expose()
+  updatedAt: string;
 }

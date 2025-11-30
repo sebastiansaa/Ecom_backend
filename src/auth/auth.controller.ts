@@ -7,11 +7,17 @@ import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService, private config: ConfigService) { }
+  constructor(
+    private authService: AuthService,
+    private config: ConfigService,
+  ) {}
 
   @Post('login')
   @Throttle(5, 60)
-  async login(@Body() body: { email: string; password: string }, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() body: { email: string; password: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const user = await this.authService.validateUser(body.email, body.password);
     if (!user) throw new Error('Unauthorized');
     const tokens = await this.authService.loginFlow(user, body['device']);
@@ -30,7 +36,10 @@ export class AuthController {
 
   @Post('register')
   @Throttle(2, 60)
-  async register(@Body() body: { email: string; password: string; name?: string }, @Res({ passthrough: true }) res: Response) {
+  async register(
+    @Body() body: { email: string; password: string; name?: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const user = await this.authService.register(body);
     const tokens = await this.authService.loginFlow(user);
     const cookieOptions = {
@@ -47,14 +56,21 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt-refresh'))
   @Throttle(10, 60)
   @Post('refresh')
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     // JwtRefreshStrategy validates token and puts payload in req.user (payload includes rid)
-    const payload = (req as any).user as any;
+    const payload = (req as any).user;
     const oldRefresh = (req as any).cookies?.['refresh_token'];
     if (!oldRefresh) throw new Error('No refresh token');
     const rid = payload.rid as string;
     const userId = payload.sub as string;
-    const tokens = await this.authService.rotateRefreshToken(userId, rid, oldRefresh);
+    const tokens = await this.authService.rotateRefreshToken(
+      userId,
+      rid,
+      oldRefresh,
+    );
     const cookieOptions = {
       httpOnly: true,
       sameSite: this.config.get('NODE_ENV') === 'production' ? 'strict' : 'lax',
@@ -69,7 +85,7 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   @Post('logout')
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const user = (req as any).user as any;
+    const user = (req as any).user;
     // revoke all refresh tokens for this user
     await this.authService.revokeAllTokens(user.id);
     res.clearCookie('refresh_token', { path: '/' });

@@ -15,7 +15,9 @@ import { UsersModule } from '../users/users.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('jwtSecret') || 'changeme',
-        signOptions: { expiresIn: config.get('ACCESS_TOKEN_EXPIRES_IN') || '1h' },
+        signOptions: {
+          expiresIn: config.get('ACCESS_TOKEN_EXPIRES_IN') || '1h',
+        },
       }),
     }),
     UsersModule,
@@ -24,4 +26,4 @@ import { UsersModule } from '../users/users.module';
   exports: [AuthService],
   controllers: [AuthController],
 })
-export class AuthModule { }
+export class AuthModule {}

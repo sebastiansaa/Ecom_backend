@@ -4,14 +4,14 @@ import type { CategoryRecord } from '../../categories/interface';
 // evitar dependencias a runtime en tipos de Prisma en este archivo de interfaces ligeras.
 
 export type ProductPrismaRecord = {
-    id: number;
-    title: string;
-    slug: string;
-    // En el dominio tratamos `price` como number
-    price: number;
-    description: string;
-    images: string[];
-    createdAt: string | Date;
-    updatedAt: string | Date;
-    category: CategoryRecord;
+  id: number;
+  title: string;
+  slug: string;
+  // En el dominio tratamos `price` como number
+  price: number | string | { toNumber(): number };
+  description: string;
+  images: string[];
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  category: CategoryRecord;
 };

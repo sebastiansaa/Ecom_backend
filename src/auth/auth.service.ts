@@ -35,8 +35,7 @@ export class AuthService {
   private async signRefreshToken(payload: Record<string, any>, rid: string) {
     // include rid in refresh token payload and sign with refresh-specific secret when available
     const refreshSecret =
-      this.config.get<string>('jwtRefreshSecret') ||
-      this.config.get<string>('jwtSecret');
+      this.config.get<string>('jwtRefreshSecret') || this.config.get<string>('jwtSecret');
     return this.jwtService.signAsync(
       { ...payload, rid },
       {
@@ -74,11 +73,7 @@ export class AuthService {
     });
   }
 
-  async rotateRefreshToken(
-    userId: string,
-    rid: string,
-    oldRefreshToken: string,
-  ) {
+  async rotateRefreshToken(userId: string, rid: string, oldRefreshToken: string) {
     const tokenRow = await this.prisma.refreshToken.findUnique({
       where: { id: rid },
     });
@@ -108,10 +103,7 @@ export class AuthService {
       await this.revokeAllTokens(userId);
       throw new UnauthorizedException('User not found');
     }
-    const newRefresh = await this.signRefreshToken(
-      { sub: userId, email: userRec.email },
-      newRid,
-    );
+    const newRefresh = await this.signRefreshToken({ sub: userId, email: userRec.email }, newRid);
     await this.createRefreshTokenEntry(userId, newRid, newRefresh);
     const access = (await this.getTokens(userId, userRec.email)).access_token;
     return { access_token: access, refresh_token: newRefresh };
@@ -120,10 +112,7 @@ export class AuthService {
   async loginFlow(user: any, device?: string) {
     const rid = require('uuid').v4();
     const access = (await this.getTokens(user.id, user.email)).access_token;
-    const refresh = await this.signRefreshToken(
-      { sub: user.id, email: user.email },
-      rid,
-    );
+    const refresh = await this.signRefreshToken({ sub: user.id, email: user.email }, rid);
     await this.createRefreshTokenEntry(user.id, rid, refresh, device);
     return { access_token: access, refresh_token: refresh, rid };
   }

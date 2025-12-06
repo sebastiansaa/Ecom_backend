@@ -32,7 +32,6 @@ model Category {
   id        Int       @id @default(autoincrement())
   name      String
   slug      String    @unique
-  image     String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   products  Product[]
@@ -42,8 +41,8 @@ model Product {
   id          Int       @id @default(autoincrement())
   title       String
   slug        String    @unique
-  // Usar Decimal para precios evita errores de redondeo con Float
-  // Precision/escala: ajustar según necesidades (ej. 10,2)
+  stock       Int       @default(0)
+  active      Boolean   @default(true)
   price       Decimal  @db.Decimal(10,2)
   description String
   images      String[]  // Prisma soporta arrays en PostgreSQL
@@ -51,4 +50,6 @@ model Product {
   updatedAt   DateTime  @updatedAt
   category    Category  @relation(fields: [categoryId], references: [id])
   categoryId  Int
+  // Usar Decimal para precios evita errores de redondeo con Float
+  // Precision/escala: ajustar según necesidades (ej. 10,2)
 }

@@ -56,21 +56,14 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt-refresh'))
   @Throttle(10, 60)
   @Post('refresh')
-  async refresh(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     // JwtRefreshStrategy validates token and puts payload in req.user (payload includes rid)
     const payload = (req as any).user;
     const oldRefresh = (req as any).cookies?.['refresh_token'];
     if (!oldRefresh) throw new Error('No refresh token');
     const rid = payload.rid as string;
     const userId = payload.sub as string;
-    const tokens = await this.authService.rotateRefreshToken(
-      userId,
-      rid,
-      oldRefresh,
-    );
+    const tokens = await this.authService.rotateRefreshToken(userId, rid, oldRefresh);
     const cookieOptions = {
       httpOnly: true,
       sameSite: this.config.get('NODE_ENV') === 'production' ? 'strict' : 'lax',

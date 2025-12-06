@@ -1,28 +1,24 @@
 /**
- * Normalizes any date-like value (Date, string, number) to a valid Date object.
- * Returns null if the value is null, undefined, or cannot be parsed into a valid Date.
+ * Normaliza cualquier valor con formato de fecha (Date, string, number) a un objeto Date válido.
+ * Devuelve null si el valor es null, undefined o no puede convertirse en una fecha válida.
  *
- * @param value - The value to convert (Date, string, number, null, or undefined).
- * @returns A valid Date object or null.
+ * @param value - El valor a convertir (Date, string, number, null o undefined).
+ * @returns Un objeto Date válido o null.
  */
-export function toDate(
-  value: Date | string | number | null | undefined,
-): Date | null {
+export function toDate(value: Date | string | number | null | undefined): Date | null {
   if (value == null) return null;
   const d = value instanceof Date ? value : new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
 /**
- * Converts any date-like value to an ISO UTC string (YYYY-MM-DDTHH:mm:ss.sssZ).
- * Returns null if the value is invalid.
+ * Convierte cualquier valor con formato de fecha a una cadena ISO en UTC (YYYY-MM-DDTHH:mm:ss.sssZ).
+ * Devuelve null si el valor es inválido.
  *
- * @param value - The value to format.
- * @returns The ISO string representation or null.
+ * @param value - El valor a formatear.
+ * @returns La representación en cadena ISO o null.
  */
-export function formatEntityDate(
-  value: Date | string | number | null | undefined,
-): string | null {
+export function formatEntityDate(value: Date | string | number | null | undefined): string | null {
   const d = toDate(value);
   if (!d) return null;
   return d.toISOString();

@@ -14,10 +14,10 @@ import {
   HttpCode,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ProductsService } from './products.service';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { FindAllQueryDto } from './dto/find-all-query.dto';
+import { ProductsService } from './domain/services/products.service';
+import { CreateProductDto } from './domain/dto/create-product.dto';
+import { UpdateProductDto } from './domain/dto/update-product.dto';
+import { FindAllQueryDto } from './domain/dto/find-all-query.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 
@@ -47,10 +47,7 @@ export class ProductsController {
 
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'))
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateProductDto: UpdateProductDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateProductDto: UpdateProductDto) {
     return this.productsService.update(id, updateProductDto);
   }
 

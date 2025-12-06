@@ -1,6 +1,6 @@
 # Módulo de Productos (Products Domain)
 
-Este módulo implementa la gestión de productos siguiendo una **Arquitectura en Capas** estricta, diseñada para ser escalable, mantenible y fácil de probar. Es un ejemplo canónico de cómo estructurar un recurso en NestJS con Prisma.
+Este módulo implementa la gestión de productos siguiendo una **Arquitectura en Capas** estricta, diseñada para ser escalable, mantenible y fácil de probar.
 
 ## 🏗 Arquitectura y Flujo de Datos
 
